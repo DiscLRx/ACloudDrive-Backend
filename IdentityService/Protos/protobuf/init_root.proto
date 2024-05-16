@@ -1,0 +1,13 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "IdentityService.Protos.Clients";
+import "google/protobuf/empty.proto";
+
+service RootDirectoryInitializer {
+  rpc CreateRootDirectory(CreateRootArgs) returns (google.protobuf.Empty);
+}
+
+message CreateRootArgs {
+  int64 uid = 1;
+}
+

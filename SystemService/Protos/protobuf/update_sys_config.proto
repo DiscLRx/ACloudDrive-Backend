@@ -1,0 +1,8 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "AdminService.Protos.Clients";
+import "google/protobuf/empty.proto";
+
+service SystemUpdater {
+  rpc Update (google.protobuf.Empty) returns (google.protobuf.Empty);
+}

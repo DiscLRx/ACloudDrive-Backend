@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+option csharp_namespace = "UserService.Protos.Clients";
+
+service Authenticator {
+	rpc Authenticate (AuthPayload) returns (AuthResult);
+}
+
+message AuthPayload {
+	string token = 1;
+}
+
+message AuthResult {
+	bool auth_pass = 1;
+	bool can_refresh = 2;
+	int64 uid = 3;
+	string role = 4;
+}
