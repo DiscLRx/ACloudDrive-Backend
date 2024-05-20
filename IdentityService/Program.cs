@@ -48,7 +48,7 @@ namespace IdentityService
             builder.Services.AddSingleton<EmailService>();
             builder.Services.AddScoped<SignInService>();
             builder.Services.AddScoped<SignUpService>();
-            builder.Services.AddScoped<ModifyPasswordService>();
+            builder.Services.AddScoped<ForgetPasswordService>();
             builder.Services.AddScoped<UserCheckService>();
             builder.Services.AddSingleton<VerificationCodeService>();
             builder.Services.AddSingleton<RefreshTokenService>();

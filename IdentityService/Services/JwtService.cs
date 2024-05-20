@@ -133,13 +133,12 @@ public class JwtService(SystemConfig systemConfig)
             {
                 return null;
             }
+            if (condition is not null && !await condition(payload))
+            {
+                return null;
+            }
         }
         catch
-        {
-            return null;
-        }
-
-        if (condition is not null && !await condition(payload))
         {
             return null;
         }

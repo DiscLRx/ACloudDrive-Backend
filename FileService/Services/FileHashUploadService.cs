@@ -48,6 +48,7 @@ public class FileHashUploadService(
                         hashUploadArgs.FileSize,
                         hashUploadArgs.FileName,
                         hashUploadArgs.DirId,
+                        hashUploadArgs.HeadHash,
                         hashUploadArgs.EntiretyHash
                     )
                 );

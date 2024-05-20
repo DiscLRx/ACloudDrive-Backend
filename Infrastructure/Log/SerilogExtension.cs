@@ -74,6 +74,7 @@ public static class SerilogExtension
 
         return host.UseSerilog(
             new LoggerConfiguration()
+                .MinimumLevel.Information()
                 .Enrich.WithUserInfo()
                 .WriteTo.MSSqlServer(
                     connectionString,

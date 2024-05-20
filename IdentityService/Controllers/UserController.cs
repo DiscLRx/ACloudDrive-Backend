@@ -33,11 +33,11 @@ public record ForgetPasswordModifyArgs(string Password, string Email, string Key
 [ApiController]
 public class UserController(
     SignUpService signUpService,
-    ModifyPasswordService modifyPasswordService,
+    ForgetPasswordService forgetPasswordService,
     UserService userService) : ControllerBase
 {
     private readonly SignUpService _signUpService = signUpService;
-    private readonly ModifyPasswordService _modifyPasswordService = modifyPasswordService;
+    private readonly ForgetPasswordService _forgetPasswordService = forgetPasswordService;
     private readonly UserService _userService = userService;
 
     [HttpPost("sign-up")]
@@ -55,13 +55,13 @@ public class UserController(
     [HttpPut("forget-password/modify")]
     public async Task<AppResponse> ForgetPasswordModifyAsync([FromBody] ForgetPasswordModifyArgs forgetPasswordModifyArgs)
     {
-        return await _modifyPasswordService.ForgetPasswordModifyAsync(forgetPasswordModifyArgs);
+        return await _forgetPasswordService.ForgetPasswordModifyAsync(forgetPasswordModifyArgs);
     }
 
     [HttpPost("forget-password/email-verify")]
     public async Task<AppResponse> ForgetPasswordSendEmailAsync([FromBody] EmailArg emailArg)
     {
-        return await _modifyPasswordService.ForgetPasswordSendEmailAsync(emailArg);
+        return await _forgetPasswordService.ForgetPasswordSendEmailAsync(emailArg);
     }
 
     [HttpGet("current")]

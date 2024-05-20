@@ -70,6 +70,7 @@ public class Program
         builder.Services.AddScoped<FileManageService>();
         builder.Services.AddHostedService<DeleteUnreferencedFileService>();
         builder.Services.AddHostedService<DeleteExpiredShareService>();
+        builder.Services.AddHostedService<DeleteExpiredRecycleBinService>();
 
         var app = builder.Build();
         app.UseCors(CorsPolicy);

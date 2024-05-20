@@ -23,7 +23,7 @@ public class ShareController(ShareService shareService) : ControllerBase
     }
 
     [HttpGet("{code}")]
-    public async Task<AppResponse> GetShareInformationAsync([FromRoute]string code, [FromQuery] string key)
+    public async Task<AppResponse> GetShareInformationAsync([FromRoute]string code = "", [FromQuery] string key = "")
     {
         return await _shareService.GetShareInformationAsync(code, key);
     }

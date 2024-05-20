@@ -116,7 +116,7 @@ public sealed class ResponseStandard
         public sealed class DuplicateEmail
         {
             public const int Code = 3002;
-            public const string Message = "Duplicate Email";
+            public const string Message = "邮箱重复";
         }
 
         /// <summary>

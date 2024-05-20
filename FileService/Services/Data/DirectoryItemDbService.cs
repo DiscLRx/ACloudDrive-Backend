@@ -191,6 +191,8 @@ namespace FileService.Services.Data
 
                 item = nextItem;
             }
+
+            await _msSqlContext.SaveChangesAsync();
         }
 
         /// <summary>

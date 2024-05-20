@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 using FileService.Configuration;
 using FileService.Services.Data;
-using FileService.Utils;
+// using FileService.Utils;
 using Infrastructure.Databases;
 using Infrastructure.Response;
 using Infrastructure.Services;
@@ -15,8 +15,14 @@ using DbFile = Infrastructure.Databases.File;
 
 namespace FileService.Services;
 
-public record PyhsicalUploadMetaData(long FileSize, string FileName, string DirId, string FileHash);
-public record FileInfo(string FileName, long FileSize, string FileHash, string DirId);
+public record PyhsicalUploadMetaData(
+    long FileSize,
+    string FileName,
+    string DirId,
+    string HeadHash,
+    string EntiretyHash);
+
+public record FileInfo(string FileName, long FileSize, string HeadHash, string FileHash, string DirId);
 
 public class FilePhysicalUploadService(
     FileDbService fileDbService,
@@ -33,7 +39,10 @@ public class FilePhysicalUploadService(
     private readonly RedisContext _redisContext = redisContext;
     private readonly FileDbService _fileDbService = fileDbService;
     private readonly DirectoryItemDbService _directoryItemDbService = directoryItemDbService;
-    private readonly DirectoryItemOperationCheckService _directoryItemOperationCheckService = directoryItemOperationCheckService;
+
+    private readonly DirectoryItemOperationCheckService _directoryItemOperationCheckService =
+        directoryItemOperationCheckService;
+
     private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
     private readonly IMinioClient _minioClient = minioClient;
     private readonly AppConfig _appConfig = appConfig;
@@ -76,7 +85,7 @@ public class FilePhysicalUploadService(
         }
 
         var chunkCount = CalcChunkCount(fileSize);
-        var tempFileName = await FileHelper.CreatePreFillFile(fileSize);
+        var tempFileName = Path.GetTempFileName();
         var hashEntries = new HashEntry[chunkCount];
         for (var i = 0; i < chunkCount; i++)
         {
@@ -92,7 +101,7 @@ public class FilePhysicalUploadService(
         var fileInfoKey = FileInfoKey(tempFileNameHash);
         var cacheFileInfoTask = _redisContext.FileUploadMetaData.StringSetAsync(
             fileInfoKey,
-            JsonSerializer.Serialize(new FileInfo(fileName, fileSize, metaData.FileHash, dirId)),
+            JsonSerializer.Serialize(new FileInfo(fileName, fileSize, metaData.HeadHash, metaData.EntiretyHash, dirId)),
             ExpireTimeSpan);
 
         var tempFileKey = TempFileKey(tempFileNameHash);
@@ -115,30 +124,32 @@ public class FilePhysicalUploadService(
     private async Task<string?> TempFileName(string uploadKey) =>
         await _redisContext.FileUploadMetaData.StringGetAsync(TempFileKey(uploadKey));
 
-    private static async Task WriteChunkToTempFile(int serial, string tempFileName, Stream chunkStream)
-    {
-        await using var fs = FsFile.OpenWrite(tempFileName);
-        fs.Seek(serial * ChunkSize, SeekOrigin.Begin);
-        chunkStream.Seek(0, SeekOrigin.Begin);
-        await chunkStream.CopyToAsync(fs);
-    }
+    // private static async Task WriteChunkToTempFile(int serial, string tempFileName, Stream chunkStream)
+    // {
+    //     await using var fs = FsFile.OpenWrite(tempFileName);
+    //     fs.Seek(serial * ChunkSize, SeekOrigin.Begin);
+    //     chunkStream.Seek(0, SeekOrigin.Begin);
+    //     await chunkStream.CopyToAsync(fs);
+    // }
 
     public async Task<AppResponse> UploadChunkAsync(string uploadKey, int serial)
     {
-        var body = _httpContextAccessor.HttpContext!.Request.Body;
-        using var memStream = new MemoryStream();
-        await body.CopyToAsync(memStream);
-
-        var tempFile = await TempFileName(uploadKey);
-        if (tempFile is null)
+        string? oldChunkFile = await _redisContext.FileUploadMetaData.HashGetAsync(ChunkInfoKey(uploadKey), serial);
+        if (oldChunkFile is not null && oldChunkFile != "")
         {
-            return AppResponse.InvalidArgument();
+            FsFile.Delete(oldChunkFile);
         }
 
-        memStream.Seek(0, SeekOrigin.Begin);
-        var chunkHash = await HashValue.Sha256Async(memStream);
-        _ = _redisContext.FileUploadMetaData.HashSetAsync(ChunkInfoKey(uploadKey), serial, chunkHash);
-        await WriteChunkToTempFile(serial, tempFile, memStream);
+        var chunkFile = Path.GetTempFileName();
+        await using var wfs = FsFile.OpenWrite(chunkFile);
+        var body = _httpContextAccessor.HttpContext!.Request.Body;
+        await body.CopyToAsync(wfs);
+        wfs.Close();
+
+        await _redisContext.FileUploadMetaData.HashSetAsync(ChunkInfoKey(uploadKey), serial, chunkFile);
+
+        await using var rfs = FsFile.OpenRead(chunkFile);
+        var chunkHash = await HashValue.Sha256Async(rfs);
         return AppResponse.Success(new { Hash = chunkHash });
     }
 
@@ -162,17 +173,41 @@ public class FilePhysicalUploadService(
             return AppResponse.InvalidArgument();
         }
 
-        await using var fs = FsFile.OpenRead(tempFile);
-        var fileHash = await HashValue.Sha256Async(fs);
-        if (!fileInfo.FileHash.Equals(fileHash, StringComparison.CurrentCultureIgnoreCase))
+        var chunkInfos = (await _redisContext.FileUploadMetaData.HashGetAllAsync(ChunkInfoKey(uploadKey)))
+            .ToList().Select(chunkInfo => new
+            {
+                Serial = Convert.ToInt32(chunkInfo.Name),
+                ChunkFileName = ((string?)chunkInfo.Value) ?? string.Empty
+            }).ToList();
+
+        if (chunkInfos.Any(info => info.ChunkFileName == string.Empty))
         {
-            var chunkInfos = await _redisContext.FileUploadMetaData.HashGetAllAsync(ChunkInfoKey(uploadKey));
-            var chunkDict = chunkInfos.ToDictionary(chunkInfo =>
-                Convert.ToInt32(chunkInfo.Name), chunkInfo => ((string?)chunkInfo.Value) ?? string.Empty);
-            return AppResponse.IncompleteFile(chunkDict);
+            return AppResponse.IncompleteFile();
         }
 
+        chunkInfos.Sort((info1, info2) => info1.Serial - info2.Serial);
+
+        await using var tempFileWriteFs = FsFile.OpenWrite(tempFile);
+        foreach (var chunkInfo in chunkInfos)
+        {
+            await using var chunkFs = FsFile.OpenRead(chunkInfo.ChunkFileName);
+            await chunkFs.CopyToAsync(tempFileWriteFs);
+            chunkFs.Close();
+            FsFile.Delete(chunkInfo.ChunkFileName);
+        }
+
+        tempFileWriteFs.Close();
+
+        await using var tempFileReadFs = FsFile.OpenRead(tempFile);
+        var fileHash = await HashValue.Sha256Async(tempFileReadFs);
         var headHash = await CalcHeadHashAsync(tempFile);
+        if (!fileInfo.FileHash.Equals(fileHash, StringComparison.CurrentCultureIgnoreCase)
+            || !fileInfo.HeadHash.Equals(headHash, StringComparison.CurrentCultureIgnoreCase))
+        {
+            return AppResponse.IncompleteFile();
+        }
+
+
         var file = await CreateNewFileAsync(headHash, fileInfo);
         _ = SaveToOssAsync(tempFile, file.Id.ToString());
 
@@ -223,6 +258,7 @@ public class FilePhysicalUploadService(
             file = (await _fileDbService.GetFileAsync(headHash, fileInfo.FileHash))!;
             await _fileDbService.IncreaseReferenceCountAsync(file.Id.ToString());
         }
+
         return file;
     }
 

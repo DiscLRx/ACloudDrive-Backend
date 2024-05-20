@@ -18,12 +18,21 @@ public class RecycleBinDbService(MsSqlContext msSqlContext, DirectoryItemDbServi
     }
 
     /// <summary>
-    /// 获取指定用户的所有根回收项
+    /// 获取指定用户至今一定时间范围内的的所有根回收项
     /// </summary>
     /// <param name="uid"></param>
+    /// <param name="timeSpan">时间范围</param>
     /// <returns></returns>
-    public async Task<List<RecycleBin>> BrowseAsync(long uid) =>
-        await _msSqlContext.RecycleBins.Where(i => i.IsRecycleRoot && i.Uid == uid).ToListAsync();
+    public async Task<List<RecycleBin>> BrowseAsync(long uid, TimeSpan timeSpan)
+    {
+        var finalDate = DateTime.Now - timeSpan;
+        return await _msSqlContext.RecycleBins
+            .Where(i => i.IsRecycleRoot)
+            .Where(i => i.Uid == uid)
+            .Where(i => i.DeleteDate >= finalDate)
+            .ToListAsync();
+    }
+
 
     public async Task MoveToRecycleBinAsync(string itemId)
     {

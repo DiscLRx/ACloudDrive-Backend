@@ -33,17 +33,45 @@ public class SystemConfigService(SystemConfig systemConfig, GrpcUpdateSystemConf
                     _systemConfig.EmailPassword = value;
                     break;
                 case nameof(SystemConfig.UserDefaultSpace):
-                    _systemConfig.UserDefaultSpace = Convert.ToInt64(value);
+                {
+                    var numValue = Convert.ToInt64(value);
+                    if (numValue < 0)
+                    {
+                        throw new FormatException();
+                    }
+                    _systemConfig.UserDefaultSpace = numValue;
                     break;
+                }
                 case nameof(SystemConfig.TokenExpireSeconds):
-                    _systemConfig.TokenExpireSeconds = Convert.ToInt64(value);
+                {
+                    var numValue = Convert.ToInt64(value);
+                    if (numValue < 0)
+                    {
+                        throw new FormatException();
+                    }
+                    _systemConfig.TokenExpireSeconds = numValue;
                     break;
+                }
                 case nameof(SystemConfig.TokenRefreshSeconds):
-                    _systemConfig.TokenRefreshSeconds = Convert.ToInt64(value);
+                {
+                    var numValue = Convert.ToInt64(value);
+                    if (numValue < 0)
+                    {
+                        throw new FormatException();
+                    }
+                    _systemConfig.TokenRefreshSeconds = numValue;
                     break;
+                }
                 case nameof(SystemConfig.VerificationCodeExpireSeconds):
-                    _systemConfig.VerificationCodeExpireSeconds = Convert.ToInt64(value);
+                {
+                    var numValue = Convert.ToInt64(value);
+                    if (numValue < 0)
+                    {
+                        throw new FormatException();
+                    }
+                    _systemConfig.VerificationCodeExpireSeconds = numValue;
                     break;
+                }
             }
         }
         catch (FormatException)

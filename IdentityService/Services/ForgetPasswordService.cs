@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IdentityService.Services
 {
-    public class ModifyPasswordService(VerificationCodeService verificationCodeService, MsSqlContext msSqlContext, UserCheckService userCheckService)
+    public class ForgetPasswordService(VerificationCodeService verificationCodeService, MsSqlContext msSqlContext, UserCheckService userCheckService)
     {
         private readonly VerificationCodeService _verificationCodeService = verificationCodeService;
         private readonly MsSqlContext _msSqlContext = msSqlContext;

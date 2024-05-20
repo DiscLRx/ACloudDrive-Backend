@@ -14,7 +14,7 @@ public class RecycleBinService(
     public async Task<AppResponse> BrowseRecycleBinAsync()
     {
         var uid = _httpContextService.Uid();
-        var recycleItems = await _recycleBinDbService.BrowseAsync(uid);
+        var recycleItems = await _recycleBinDbService.BrowseAsync(uid, TimeSpan.FromDays(30));
         var results = new List<dynamic>();
         foreach (var item in recycleItems)
         {
