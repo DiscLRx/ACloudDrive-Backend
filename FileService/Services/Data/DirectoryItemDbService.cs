@@ -10,7 +10,17 @@ namespace FileService.Services.Data
         private readonly MsSqlContext _msSqlContext = msSqlContext;
         private readonly FileDbService _fileDbService = fileDbService;
 
-        private static Guid ToGuid(string id) => new(id);
+        private static Guid ToGuid(string id)
+        {
+            try
+            {
+                return new Guid(id);
+            }
+            catch
+            {
+                return Guid.Empty;
+            }
+        }
 
         /// <summary>
         /// 根据id获取目录项

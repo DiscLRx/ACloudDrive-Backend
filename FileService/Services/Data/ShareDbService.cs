@@ -3,12 +3,21 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FileService.Services.Data;
 
-public class ShareDbService(MsSqlContext msSqlContext, DirectoryItemDbService directoryItemDbService)
+public class ShareDbService(MsSqlContext msSqlContext)
 {
     private readonly MsSqlContext _msSqlContext = msSqlContext;
-    private readonly DirectoryItemDbService _directoryItemDbService = directoryItemDbService;
 
-    private static Guid ToGuid(string id) => new(id);
+    private static Guid ToGuid(string id)
+    {
+        try
+        {
+            return new Guid(id);
+        }
+        catch
+        {
+            return Guid.Empty;
+        }
+    }
 
     public async Task CreateAsync(Share share)
     {

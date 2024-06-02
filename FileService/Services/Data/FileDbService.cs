@@ -7,8 +7,18 @@ namespace FileService.Services.Data
     public class FileDbService(MsSqlContext msSqlContext)
     {
         private readonly MsSqlContext _msSqlContext = msSqlContext;
-        
-        private static Guid ToGuid(string id) => new(id);
+
+        private static Guid ToGuid(string id)
+        {
+            try
+            {
+                return new Guid(id);
+            }
+            catch
+            {
+                return Guid.Empty;
+            }
+        }
 
         /// <summary>
         /// 根据id获取文件

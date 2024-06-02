@@ -3,13 +3,26 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FileService.Services.Data;
 
-public class RecycleBinDbService(MsSqlContext msSqlContext, DirectoryItemDbService directoryItemDbService, FileDbService fileDbService)
+public class RecycleBinDbService(
+    MsSqlContext msSqlContext,
+    DirectoryItemDbService directoryItemDbService,
+    FileDbService fileDbService)
 {
     private readonly MsSqlContext _msSqlContext = msSqlContext;
     private readonly DirectoryItemDbService _directoryItemDbService = directoryItemDbService;
     private readonly FileDbService _fileDbService = fileDbService;
 
-    private static Guid ToGuid(string id) => new(id);
+    private static Guid ToGuid(string id)
+    {
+        try
+        {
+            return new Guid(id);
+        }
+        catch
+        {
+            return Guid.Empty;
+        }
+    }
 
     public async Task<RecycleBin?> GetAsync(string id)
     {
